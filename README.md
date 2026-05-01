@@ -1,5 +1,7 @@
 # edifact-mcp-server
 
+[![CI](https://github.com/Macaldente/edifact-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/Macaldente/edifact-mcp-server/actions/workflows/ci.yml)
+
 Ein lokaler [MCP](https://modelcontextprotocol.io/)-Server (Model Context Protocol) für **UN/EDIFACT**- und **X12**-Nachrichten mit echter Schema-Validierung.
 
 Basiert auf:
@@ -141,15 +143,38 @@ StAEDI erkennt den Standard automatisch anhand der Interchange-Header:
 
 Für Validierung über die Kontrollstruktur hinaus (z.B. branchenspezifische Implementierungen wie EANCOM oder HIPAA) kann StAEDI benutzerdefinierte XML-Schemas laden. Siehe die [StAEDI-Wiki-Seite zur Validierung](https://github.com/xlate/staedi/wiki/Validation) für Details zum Schema-Format.
 
+## Tests
+
+Das Projekt enthält 14 JUnit 5 Tests, die alle drei Tools abdecken:
+
+```bash
+mvn test
+```
+
+| Testgruppe       | Tests | Prüft                                                    |
+|------------------|-------|----------------------------------------------------------|
+| `ValidateTests`  | 5     | Gültige/ungültige Nachrichten, Fehlerreport, Edge Cases  |
+| `ParseTests`     | 4     | Segmenterkennung, Elementwerte, Segmentanzahl            |
+| `DescribeTests`  | 5     | Standard, Version, Nachrichtentypen, Segmentliste        |
+
+CI läuft automatisch auf GitHub Actions mit Temurin 17 und 21.
+
 ## Projektstruktur
 
 ```
 edifact-mcp-server/
 ├── pom.xml                                          # Maven-Build mit MCP SDK + StAEDI
+├── .github/workflows/ci.yml                         # GitHub Actions CI
 ├── src/main/java/dev/edifact/mcp/
 │   └── EdifactMcpServer.java                        # MCP-Server mit 3 Tools
-└── src/main/resources/
-    └── logback.xml                                  # Logging → stderr (STDIO-safe)
+├── src/main/resources/
+│   └── logback.xml                                  # Logging → stderr (STDIO-safe)
+└── src/test/
+    ├── java/dev/edifact/mcp/
+    │   └── EdifactMcpServerTest.java                # 14 JUnit 5 Tests
+    └── resources/
+        ├── sample-orders.edi                        # Gültige ORDERS-Nachricht
+        └── sample-invalid.edi                       # Ungültige Nachricht
 ```
 
 ## Lizenz

@@ -40,6 +40,25 @@ Erstelle oder ergänze `~/.warp/.mcp.json`:
 }
 ```
 
+### Zed
+
+Öffne `~/.config/zed/settings.json` (`Cmd+Shift+P` → `zed: open settings`) und ergänze den `context_servers`-Schlüssel:
+
+```json
+{
+  "context_servers": {
+    "edifact": {
+      "command": "java",
+      "args": ["-jar", "/absoluter/pfad/zu/edifact-mcp-server/target/edifact-mcp-server-1.0.0.jar"]
+    }
+  }
+}
+```
+
+> **Hinweis:** Zed verwendet `context_servers` statt `mcpServers`. Nach dem Speichern startet der Server automatisch.
+
+**Status prüfen:** Agent Panel öffnen (`Cmd+Shift+A`) → Einstellungen → Statuspunkt neben `edifact` (grün = aktiv). Bei Problemen: `Cmd+Shift+P` → `zed: open logs`.
+
 ### Claude Desktop / Cursor / andere MCP-Clients
 
 Gleiche Konfiguration – passe den Dateinamen der Config-Datei an den jeweiligen Client an (`claude_desktop_config.json`, `.cursor/mcp.json`, etc.):

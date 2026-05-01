@@ -134,7 +134,7 @@ public class EdifactMcpServer {
 
     // ── Tool implementations ────────────────────────────────────────────
 
-    private static McpSchema.CallToolResult doValidate(String ediData) {
+    static McpSchema.CallToolResult doValidate(String ediData) {
         if (ediData == null || ediData.isBlank()) {
             return errorResult("edi_data darf nicht leer sein.");
         }
@@ -197,7 +197,7 @@ public class EdifactMcpServer {
                 .build();
     }
 
-    private static McpSchema.CallToolResult doParse(String ediData) {
+    static McpSchema.CallToolResult doParse(String ediData) {
         if (ediData == null || ediData.isBlank()) {
             return errorResult("edi_data darf nicht leer sein.");
         }
@@ -277,7 +277,7 @@ public class EdifactMcpServer {
                 .build();
     }
 
-    private static McpSchema.CallToolResult doDescribe(String ediData) {
+    static McpSchema.CallToolResult doDescribe(String ediData) {
         if (ediData == null || ediData.isBlank()) {
             return errorResult("edi_data darf nicht leer sein.");
         }
@@ -296,6 +296,8 @@ public class EdifactMcpServer {
 
             boolean inMessageHeader = false;
             int headerElementIndex = 0;
+            boolean inComposite = false;
+            boolean capturedMsgType = false;
 
             while (reader.hasNext()) {
                 EDIStreamEvent event = reader.next();
@@ -311,40 +313,39 @@ public class EdifactMcpServer {
                         if (!segmentNames.contains(name)) {
                             segmentNames.add(name);
                         }
-                        // Track UNH (EDIFACT) or ST (X12) to extract message type
                         inMessageHeader = "UNH".equals(name) || "ST".equals(name);
                         headerElementIndex = 0;
-                    }
-                    case ELEMENT_DATA -> {
-                        if (inMessageHeader) {
-                            headerElementIndex++;
-                            String text = reader.getText();
-                            // For X12 ST: element 1 is transaction set ID
-                            // For EDIFACT UNH: element 2 (composite) first component is message type
-                            if ("X12".equals(standard) && headerElementIndex == 1 && text != null) {
-                                if (!messageTypes.contains(text)) messageTypes.add(text);
-                            }
-                        }
+                        capturedMsgType = false;
                     }
                     case START_COMPOSITE -> {
                         if (inMessageHeader) headerElementIndex++;
+                        inComposite = true;
+                    }
+                    case END_COMPOSITE -> {
+                        inComposite = false;
+                    }
+                    case ELEMENT_DATA -> {
+                        if (inMessageHeader && !capturedMsgType) {
+                            // Only count top-level elements, not composite components
+                            if (!inComposite) headerElementIndex++;
+                            String text = reader.getText();
+                            // X12 ST: element 1 is transaction set ID
+                            if ("X12".equals(standard) && headerElementIndex == 1 && text != null) {
+                                if (!messageTypes.contains(text)) messageTypes.add(text);
+                                capturedMsgType = true;
+                            }
+                            // EDIFACT UNH: first component of element 2 (composite S009)
+                            if ("EDIFACT".equals(standard) && headerElementIndex == 2
+                                    && inComposite && text != null && !text.isBlank()) {
+                                if (!messageTypes.contains(text)) messageTypes.add(text);
+                                capturedMsgType = true;
+                            }
+                        }
                     }
                     case END_SEGMENT -> {
                         inMessageHeader = false;
                     }
                     default -> { /* ignore */ }
-                }
-
-                // For EDIFACT UNH: message type is first component of the second element (composite S009)
-                if (inMessageHeader && "EDIFACT".equals(standard)
-                        && event == EDIStreamEvent.ELEMENT_DATA
-                        && headerElementIndex == 2) {
-                    String text = reader.getText();
-                    if (text != null && !text.isBlank() && !messageTypes.contains(text)) {
-                        messageTypes.add(text);
-                    }
-                    // Only capture first component
-                    inMessageHeader = false;
                 }
             }
             reader.close();
@@ -371,7 +372,7 @@ public class EdifactMcpServer {
 
     // ── Helpers ─────────────────────────────────────────────────────────
 
-    private static McpSchema.CallToolResult errorResult(String message) {
+    static McpSchema.CallToolResult errorResult(String message) {
         return McpSchema.CallToolResult.builder()
                 .content(List.of(new McpSchema.TextContent("ERROR: " + message)))
                 .isError(true)
